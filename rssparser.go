@@ -2,10 +2,13 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/xml"
-	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // RSS xml structure to parse it with the xml lib
@@ -32,7 +35,7 @@ func feedreader(data []byte) rss {
 	xmlreader := xml.NewDecoder(bytes.NewReader(data))
 	err := xmlreader.Decode(&feed)
 	if err != nil {
-		fmt.Printf("error: %v", err)
+		log.Fatal(err)
 	}
 	return feed
 }
@@ -42,22 +45,44 @@ func getfeed(url string) []byte {
 	res, err := http.Get(url)
 	defer res.Body.Close()
 	if err != nil {
-		fmt.Printf("error: %v", err)
+		log.Fatal(err)
 	}
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		fmt.Printf("error: %v", err)
+		log.Fatal(err)
 	}
 	return data
 }
 
-// TODO use log instead of prints
+func dbsaver(feed rss) {
+	db, err := sql.Open("sqlite3", "./feedb.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+	tx, err := db.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
+	// TABLE structure : create table items(item text, link text, pubdate integer, channel text)
+	stmt, err := tx.Prepare("INSERT INTO items(item, link, pubdate, channel) VALUES(?, ?, ?, ?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	for _, item := range feed.Channel.Items {
+		_, err = stmt.Exec(item.Title, item.Link, item.PubDate, feed.Channel.Title)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	tx.Commit()
+}
+
 func main() {
 	//url := "http://feeds.weblogssl.com/genbeta"
 	url := "http://www.eldiario.es/rss/"
 	data := getfeed(url)
 	feed := feedreader(data)
-	for _, item := range feed.Channel.Items {
-		fmt.Println(item)
-	}
+	dbsaver(feed)
 }
