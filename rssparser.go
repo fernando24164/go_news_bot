@@ -83,31 +83,6 @@ func dbsaver(feed rss) {
 	tx.Commit()
 }
 
-// Get the items from de database with the flag for only not sent ones or everything
-func getitems(onlynew bool) {
-	db, err := sql.Open("sqlite3", "./feedb.db")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-	rows, err := db.Query("SELECT * FROM items")
-	if err != nil {
-		log.Fatal(err)
-	}
-	for rows.Next() {
-		var item, link, pubdate, channel string
-		var sent int
-		rows.Scan(&item, &link, &pubdate, &channel, &sent)
-		if onlynew {
-			fmt.Println("Item: ", item, " - Link : ", link, " - Publication date : ",
-				pubdate, " - Channel : ", channel)
-		} else {
-			fmt.Println("Item: ", item, " - Link : ", link, " - Publication date : ",
-				pubdate, " - Channel : ", channel, " - Sent : ", sent)
-		}
-	}
-}
-
 // Search for the list of subcriptions for a user
 func getfeedsubcriptions(user string) []string {
 	// TABLE structure : create table subcriptions(id int, name text, list text)
@@ -147,7 +122,8 @@ func scheduler(sleeper int, user string) {
 func main() {
 	sleeper := 60
 	user := "agpatag"
-	scheduler(sleeper, user)
+	go scheduler(sleeper, user)
+	apiserver()
 	// getitems(false)
 	// urls := getfeedsubcriptions(user)
 }
