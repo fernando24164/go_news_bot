@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,12 +10,8 @@ import (
 
 // Get the items from de database with the flag for only not sent ones or everything
 func getitems(onlynew bool) string {
-	db, err := sql.Open("sqlite3", "./feedb.db")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
 	rows, err := db.Query("SELECT * FROM items")
+	defer rows.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,6 +32,7 @@ func itemsresponse(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, getitems(false), "")
 }
 
+// API function to query the database
 func apiserver() {
 	http.HandleFunc("/getfeed/", itemsresponse)
 	http.ListenAndServe(":9096", nil)

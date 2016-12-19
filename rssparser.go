@@ -59,11 +59,6 @@ func getfeed(url string) []byte {
 
 // Save all the items get from the subcriptions on the database
 func dbsaver(feed rss) {
-	db, err := sql.Open("sqlite3", "./feedb.db")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
 	tx, err := db.Begin()
 	if err != nil {
 		log.Fatal(err)
@@ -75,7 +70,7 @@ func dbsaver(feed rss) {
 	}
 	defer stmt.Close()
 	for _, item := range feed.Channel.Items {
-		_, err = stmt.Exec(item.Title, item.Link, item.PubDate, feed.Channel.Title, 0)
+		_, err := stmt.Exec(item.Title, item.Link, item.PubDate, feed.Channel.Title, 0)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -87,13 +82,8 @@ func dbsaver(feed rss) {
 func getfeedsubcriptions(user string) []string {
 	// TABLE structure : create table subcriptions(id int, name text, list text)
 	// INSERT : INSERT INTO subcriptions(id, name, list) VALUES("1", "agpatag", "http://feeds.weblogssl.com/genbeta,http://www.eldiario.es/rss")
-	db, err := sql.Open("sqlite3", "./feedb.db")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
 	var list string
-	err = db.QueryRow("SELECT list FROM subcriptions WHERE name = ?", user).Scan(&list)
+	err := db.QueryRow("SELECT list FROM subcriptions WHERE name = ?", user).Scan(&list)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -119,7 +109,16 @@ func scheduler(sleeper int, user string) {
 	}
 }
 
+// connection with the database as a global variable
+var db *sql.DB
+
 func main() {
+	var err error
+	db, err = sql.Open("sqlite3", "./feedb.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
 	sleeper := 60
 	user := "agpatag"
 	go scheduler(sleeper, user)
