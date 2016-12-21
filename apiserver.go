@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -18,9 +17,7 @@ type jItem struct {
 func getitems(onlynew bool) []byte {
 	rows, err := db.Query("SELECT * FROM items LIMIT 0,2")
 	defer rows.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkError(err)
 	var responseList []jItem
 	for rows.Next() {
 		var item, link, pubdate, channel string
@@ -29,9 +26,7 @@ func getitems(onlynew bool) []byte {
 		responseList = append(responseList, jItem{Title: item, Link: link, PubDate: pubdate})
 	}
 	jsonResp, err := json.Marshal(responseList)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkError(err)
 	return jsonResp
 }
 

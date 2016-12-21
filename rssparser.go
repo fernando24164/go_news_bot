@@ -32,14 +32,18 @@ type rss struct {
 	Channel *channel `xml:"channel"`
 }
 
+func checkError(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 // Parse the feed data into the struct tags implemented before
 func feedreader(data []byte) rss {
 	feed := rss{}
 	xmlreader := xml.NewDecoder(bytes.NewReader(data))
 	err := xmlreader.Decode(&feed)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkError(err)
 	return feed
 }
 
@@ -47,9 +51,7 @@ func feedreader(data []byte) rss {
 func getfeed(url string) []byte {
 	res, err := http.Get(url)
 	defer res.Body.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkError(err)
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		log.Fatal(err)
@@ -60,9 +62,7 @@ func getfeed(url string) []byte {
 // Save all the items get from the subcriptions on the database
 func dbsaver(feed rss) {
 	tx, err := db.Begin()
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkError(err)
 	// TABLE structure : create table items(item text, link text, pubdate integer, channel text, sent integer)
 	stmt, err := tx.Prepare("INSERT INTO items(item, link, pubdate, channel, sent) VALUES(?, ?, ?, ?, ?)")
 	if err != nil {
@@ -71,9 +71,7 @@ func dbsaver(feed rss) {
 	defer stmt.Close()
 	for _, item := range feed.Channel.Items {
 		_, err := stmt.Exec(item.Title, item.Link, item.PubDate, feed.Channel.Title, 0)
-		if err != nil {
-			log.Fatal(err)
-		}
+		checkError(err)
 	}
 	tx.Commit()
 }
@@ -84,9 +82,7 @@ func getfeedsubcriptions(user string) []string {
 	// INSERT : INSERT INTO subcriptions(id, name, list) VALUES("1", "agpatag", "http://feeds.weblogssl.com/genbeta,http://www.eldiario.es/rss")
 	var list string
 	err := db.QueryRow("SELECT list FROM subcriptions WHERE name = ?", user).Scan(&list)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkError(err)
 	result := make([]string, 0)
 	for _, source := range strings.Split(list, ",") {
 		result = append(result, source)
@@ -115,9 +111,7 @@ var db *sql.DB
 func main() {
 	var err error
 	db, err = sql.Open("sqlite3", "./feedb.db")
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkError(err)
 	defer db.Close()
 	sleeper := 60
 	user := "agpatag"
