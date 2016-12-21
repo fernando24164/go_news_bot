@@ -9,19 +9,14 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type jList struct {
-	items []jItem
-}
-
+// Struc to define item's json object
 type jItem struct {
-	Title   string
-	Link    string
-	PubDate string
+	Title, Link, PubDate string
 }
 
 // Get the items from de database with the flag for only not sent ones or everything
 func getitems(onlynew bool) []byte {
-	rows, err := db.Query("SELECT * FROM items")
+	rows, err := db.Query("SELECT * FROM items LIMIT 0,2")
 	defer rows.Close()
 	if err != nil {
 		log.Fatal(err)
@@ -31,21 +26,18 @@ func getitems(onlynew bool) []byte {
 		var item, link, pubdate, channel string
 		var sent int
 		rows.Scan(&item, &link, &pubdate, &channel, &sent)
-		responseList = append(responseList, jItem{item, link, pubdate})
+		responseList = append(responseList, jItem{Title: item, Link: link, PubDate: pubdate})
 	}
-	response := jList{responseList}
-	jsonResp, err := json.Marshal(response)
+	jsonResp, err := json.Marshal(responseList)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return jsonResp
 }
 
+// Print items in json
 func itemsresponse(w http.ResponseWriter, r *http.Request) {
-	//user := r.URL.Path[len("/getfeed/"):]
-	//fmt.Println(user)
-	//getitems(false)
-	fmt.Println(getitems(false))
+	fmt.Fprintf(w, "%s", getitems(false))
 }
 
 // API function to query the database
